@@ -8,28 +8,14 @@ import System.Environment
 import Text.Printf
 import qualified Data.Sequence as S
 
-data Barbie = Ken Double | Naomi Double
-
-(Ken b1) `mycompare` (Naomi b2) = b1 `compare` b2
-(Naomi b1) `mycompare` (Ken b2) = b1 `compare` b2
-(Naomi b1) `mycompare` (Naomi b2) = b1 `compare` b2
-(Ken b1) `mycompare` (Ken b2) = b1 `compare` b2
-
-instance Eq Barbie where
-    (Ken b1) == (Naomi b2) = b1 == b2
-    (Naomi b1) == (Ken b2) = b1 == b2
-    (Naomi b1) == (Naomi b2) = b1 == b2
-    (Ken b1) == (Ken b2) = b1 == b2
-instance Ord Barbie where
-    compare = mycompare
 -- Parser 
 parseNumber :: Parser Double
 parseNumber = rational 
 parseLine = manyTill' (parseNumber <* many' (string " ")) endOfLine
 parseCase =do
         n <- decimal <* endOfLine
-        boxNaomi <- liftM (S.sort . S.fromList) $ parseLine
-        boxKen   <- liftM (S.sort . S.fromList) $ parseLine
+        boxNaomi <- liftM (S.sort . S.fromList) parseLine
+        boxKen   <- liftM (S.sort . S.fromList) parseLine
         return (boxNaomi,boxKen)
         
 parseProblem = do
@@ -48,6 +34,7 @@ parserTest = do
 cmdArg []  = error "\nNecessario um argumento com extensão"
 cmdArg (x:xs) = x
 
+-- Deceitful  War
 run = proxy 0
 proxy :: Int->S.Seq Double -> S.Seq Double -> Int
 proxy n naomi ken | last==1 = if worstNaomi > worstKen then n+1 else n
@@ -62,7 +49,7 @@ proxy n naomi ken | last==1 = if worstNaomi > worstKen then n+1 else n
     bestNaomi  = S.index naomi (last-1)
     bestKen    = S.index ken (last-1)
 
-
+-- just War
 run2 = proxy2 0
 proxy2 :: Int->S.Seq Double -> S.Seq Double -> Int
 proxy2 n naomi ken | last==1 = if worstNaomi > worstKen then n+1 else n
@@ -85,5 +72,5 @@ main = do
         B.writeFile "results.txt" $ helper contents
         putStrLn "\nDone\n"
         where 
-        helper  input = B.unlines $  zipWith doline [1..] $ zipWith (,) (map (uncurry run) input) (map (uncurry run2) input)
+        helper  input = B.unlines $  zipWith doline [1..] $ zip (map (uncurry run) input) (map (uncurry run2) input)
         doline a (t1,t2) = B.pack $ "Case #"++show a++": "++ show t1++" "++show t2
