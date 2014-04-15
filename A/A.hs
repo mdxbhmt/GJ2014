@@ -46,14 +46,14 @@ parserTest = do
 cmdArg []  = error "\nNecessario um argumento com extensão"
 cmdArg (x:xs) = x
 
-intersect :: [Int]-> [Int] -> [Int]
-intersect  xs = filter (`elem` xs)
+testing :: [Int]-> [Int] -> [Int]
+testing xs ys = filter (`elem` xs) ys 
 
 magician []  = Cheating
 magician [x] = Guess x
 magician _   =  Bad
 
-run (guess1,grid1, guess2, grid2) =   (grid1 !! (guess1-1)) `intersect` (grid2 !! (guess2-1)) 
+run (guess1,grid1, guess2, grid2) = testing (grid1 !! (guess1-1))  (grid2 !! (guess2-1)) 
 
 
 -- parserTest optional        

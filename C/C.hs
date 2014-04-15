@@ -21,21 +21,16 @@ mychar (Click)   = 'c'
 myshow (Mine)    = "*"
 myshow (Number x)= "."
 myshow (Space)   = "."
-myshow (Click)   = "c"
+myshow (Click)   = "C"
 instance Show Sweeper where
     show=myshow
-
-isMine    Mine = True
-isMine    _    = False
-
-isSpace   Space = True
-isSpace   _     = False
-
-isNumber (Number _) = True
-isNumber  _         = False
-
 -- Parser 
-
+isSpace Space = True
+isSpace _ = False
+isMine Mine = True
+isMine _ = False
+isNumber (Number _) = True
+isNumber _ = False
 parseNumber = decimal
 parseCase =do
         r <- parseNumber
@@ -64,14 +59,13 @@ parserTest = do
 cmdArg []  = error "\nNecessario um argumento com extensão"
 cmdArg (x:xs) = x
 
+makematrix r c =  M.matrix r c (\_ -> Space)
 
--- problem functions -- doesn't solve problem
-makematrix r c =  M.matrix r c (const Space)
 
 makematrix2 r c m
-        |m >= c = M.rowVector ( V.replicate c Mine) M.<-> makematrix2 (r-1)c (m-c)
-        |m >= r = M.colVector ( V.replicate r Mine) M.<|> makematrix2 r (c-1) (m-r)
-        |otherwise = M.rowVector ( V.fromList (replicate m Mine ++ replicate (c-m) Space) )M.<-> makematrix (r-1) c 
+        |m >= c = (M.rowVector $ V.replicate c Mine) M.<-> makematrix2 (r-1)c (m-c)
+        |m >= r = (M.colVector $ V.replicate r Mine) M.<|> makematrix2 r (c-1) (m-r)
+        |otherwise = (M.rowVector $ V.fromList (replicate m Mine ++ replicate (c-m) Space) )M.<-> makematrix (r-1) c 
 
 
 makematrix3 r c m
@@ -80,12 +74,12 @@ makematrix3 r c m
         |c >= r = makeCol r c m
 
 makeRow r c m 
-    |m >= c = M.rowVector ( V.replicate c Mine)  M.<-> makematrix3 (r-1) c (m-c)
-    |otherwise = M.colVector ( V.fromList (replicate m Mine ++ replicate (r-m) Space)) M.<|> makematrix r (c-1)   
+    |m >= c = (M.rowVector $ V.replicate c Mine)  M.<-> makematrix3 (r-1) c (m-c)
+    |otherwise = (M.colVector $ V.fromList (replicate m Mine ++ replicate (r-m) Space)) M.<|> makematrix r (c-1)   
     
 makeCol r c m 
-    |m >= r = M.colVector ( V.replicate r Mine) M.<|> makematrix3 r (c-1) (m-r)
-    |otherwise = M.rowVector ( V.fromList (replicate m Mine ++ replicate (c-m) Space)) M.<-> makematrix (r-1) c  
+    |m >= r = (M.colVector $ V.replicate r Mine) M.<|> makematrix3 r (c-1) (m-r)
+    |otherwise = (M.rowVector $ V.fromList (replicate m Mine ++ replicate (c-m) Space)) M.<-> makematrix (r-1) c  
     
 spaceIndex matrix = [(i,j)|i<-[1..r],j<-[1..c], isSpace (matrix M.!(i,j))]
     where 
@@ -96,38 +90,37 @@ numberIndexes matrix = [(i,j)|i<-[1..r],j<-[1..c], isNumber(matrix M.!(i,j))]
     where 
     r = M.nrows matrix
     c = M.ncols matrix
-
--- Special case if matrix only has one place to be clicked
 run (r,c,m,matrix) = do
-      let m2= firstTransform matrix
-      m3 <- if r*c-m==1 then return matrix else test m2 -- special case
-      secondTransform m3
+      let m2= first_transform matrix
+      m3 <- if (r*c-m==1) then return matrix else test m2
+      second_transform m3
 
-test matrix = if all (numberWithSpace matrix) indexes then Just matrix else Nothing
+test matrix = if all (numberWithSpace matrix) $ indexes then Just matrix else Nothing
     where
     indexes = numberIndexes matrix
     
-secondTransform matrix = if null indexes then Nothing else Just $  M.setElem Click (head indexes) matrix
+second_transform matrix = if null indexes then Nothing else Just $  M.setElem Click (head indexes) matrix
     where
     indexes = spaceIndex matrix 
-firstTransform matrix =  foldl' (\m (v,(i,j)) -> M.setElem v (i,j) m) matrix (zip numbers indexes)
+first_transform matrix =  foldl' (\m (v,(i,j)) -> M.setElem v (i,j) m) matrix (zipWith (,) numbers indexes)
     where
     numbers =  map (mineNumber matrix) indexes
     indexes = spaceIndex matrix 
-
+--indexes = spaceIndex matrix
 mineNumber matrix (u,v) = if value==0 then Space else Number value
     where 
     value =  sum [1|i<-[u-1,u,u+1],j<-[v-1,v,v+1], i>=1,j>=1,i<=r,j<=c,isMine(matrix M.!(i,j))]
     r = M.nrows matrix
     c = M.ncols matrix
 
-numberWithSpace matrix (u,v) = value>0
+numberWithSpace matrix (u,v) = if value>0 then True else False
     where 
     value =  sum [1|i<-[u-1,u,u+1],j<-[v-1,v,v+1], i>=1,j>=1,i<=r,j<=c, isSpace(matrix M.!(i,j))]
     r = M.nrows matrix
-    c = M.ncols matrix   
-    
-
+    c = M.ncols matrix    
+prettyM matrix = concat . intersperse "\n" . ( map ((map mychar) . V.toList . ((flip M.getRow) matrix) ) ) $  [1..r]
+    where
+    r = M.nrows matrix
 
     
 -- parserTest optional        
@@ -143,6 +136,3 @@ main = do
         pretty :: Maybe (M.Matrix Sweeper) -> String
         pretty (Nothing) = "Impossible"
         pretty (Just matrix) = prettyM matrix
-        prettyM matrix = intercalate "\n" .  map (map mychar . V.toList . (`M.getRow` matrix) )  $  [1..r]
-            where
-            r = M.nrows matrix
